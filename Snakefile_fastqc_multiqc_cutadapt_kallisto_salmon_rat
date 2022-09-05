@@ -1,0 +1,163 @@
+### Importing glob wildcard
+
+import glob
+
+## Importing Configuration file
+configfile: "config.yaml"
+
+SAMPLE,=glob_wildcards("{sample}_R1_001.fastq.gz")
+
+rule all:
+    input:
+        expand("{sample}_R1_001_fastqc.html",sample=SAMPLE),
+        "multiqc_report.html",
+        expand("{sample}_R1_001_trimmed.fastq.gz",sample=SAMPLE),
+        expand("{sample}_R1_001_trimmed_fastqc.html",sample=SAMPLE),
+        expand("kallisto.{sample}/abundance.tsv",sample=SAMPLE),
+        expand("salmon.{sample}/quant.sf",sample=SAMPLE)
+
+
+### FastQC analysis
+rule fastqc_analysis:
+    input:
+        R1= "{sample}_R1_001.fastq.gz",
+        R2= "{sample}_R2_001.fastq.gz"
+    output:
+        "{sample}_R1_001_fastqc.html",
+        "{sample}_R1_001_fastqc.zip",
+        "{sample}_R2_001_fastqc.html",
+        "{sample}_R2_001_fastqc.zip"
+    conda:
+        "env.yaml"
+    shell:
+        "fastqc {input.R1} {input.R2}"
+
+### MultiQC analysis
+rule run_multiqc:
+    input:
+        "HSC_T6_S3_R1_001_fastqc.html",
+        "HSC_T6_S3_R2_001_fastqc.html"
+    output:
+        "multiqc_report.html",
+        directory("multiqc_data")
+    shell:
+        "multiqc ."
+
+### Trimming fastq data by Cutadapt
+
+# Making sequence adapter
+rule making_seq_adapter:
+    output:
+        temp("adapterSeq.fa")
+    shell:
+        """
+        echo -e ">illumina_adapter_forward\n{config[adapter_seq]}" > adapterSeq.fa
+        """
+# Computing reverse complement sequence
+rule compute_reverse_complement:
+    input:
+        "adapterSeq.fa"
+    output:
+        temp("adapterSeqRevComp.fa")
+    shell:
+        "fastx_reverse_complement -i {input} -o {output}"
+
+# Trimming by Cutadapt
+rule cutadapt:
+    input:
+        adapter_reserve_complement = "adapterSeqRevComp.fa",
+        R1= "{sample}_R1_001.fastq.gz",
+        R2= "{sample}_R2_001.fastq.gz"
+    output:
+        R1="{sample}_R1_001_trimmed.fastq.gz",
+        R2="{sample}_R2_001_trimmed.fastq.gz"
+    shell:
+        "cutadapt -a {config[adapter_seq]} -A $(tail -n1 {input.adapter_reserve_complement}) -o {output.R1} -p {output.R2} {input.R1} {input.R2}"
+
+### FastQC analysis of trimmed fastq data
+rule fastqc_analysis_trimmed:
+    input:
+        R1= "{sample}_R1_001_trimmed.fastq.gz",
+        R2= "{sample}_R2_001_trimmed.fastq.gz"
+    output:
+        "{sample}_R1_001_trimmed_fastqc.html",
+        "{sample}_R1_001_trimmed_fastqc.zip",
+        "{sample}_R2_001_trimmed_fastqc.html",
+        "{sample}_R2_001_trimmed_fastqc.zip"
+    shell:
+        "fastqc {input.R1} {input.R2}"
+
+### Quantification of transcripts by Kallisto and Salmon
+
+## Downloading reference fasta in regard to Kallisto and Salmon
+rule download_ref:
+    input:
+    output:
+        "Rattus_norvegicus.Rnor_6.0.cdna.all.fa.gz"
+    shell:
+        "wget -c {config[ref_fasta_sal_kal_rat]}"
+
+## Extracting downloaded reference fasta   
+rule extract_ref:
+    input:
+        "Rattus_norvegicus.Rnor_6.0.cdna.all.fa.gz"
+    output:
+        "Rattus_norvegicus.Rnor_6.0.cdna.all.fa"
+    shell:
+        "gzip -d {input}"
+
+
+## Kallisto indexing
+rule create_index_kallisto:
+    input:
+        "Rattus_norvegicus.Rnor_6.0.cdna.all.fa"
+    output:
+        "transcripts.idx"
+    shell:
+        "kallisto index -i {output} {input}"
+
+## Kallisto quantification
+rule kallisto_quant:
+    output:
+        "kallisto.{sample}/abundance.tsv"
+
+    input:
+        index = "transcripts.idx",
+        R1   = "{sample}_R1_001_trimmed.fastq.gz",
+        R2   = "{sample}_R2_001_trimmed.fastq.gz",
+    shell:
+        "kallisto quant -i {input.index} -o kallisto.{wildcards.sample} {input.R1} {input.R2}"
+
+
+## Quantification of transcripts by Salmon
+SALMON_INDEX= "{config[salmon_index_rat]}"
+
+## Creating Salmon directory
+rule salmon_directory:
+    output:
+        directory("salmon_index")
+    shell:
+        "mkdir {output} && "
+
+## Salmon indexing
+rule create_index_salmon:
+    input:
+        "Rattus_norvegicus.Rnor_6.0.cdna.all.fa"
+    output:
+        directory("{SALMON_INDEX}/transcripts.idx")
+    shell:
+        "salmon index --gencode -p 12 -t {input} -i {output}"
+
+## Salmon quantification
+rule salmon_quant:
+    output:
+        "salmon.{sample}/quant.sf",
+    input:
+        index = "salmon_index/transcripts.idx",
+        R1   = "{sample}_R1_001_trimmed.fastq.gz",
+        R2   = "{sample}_R2_001_trimmed.fastq.gz",
+
+    shell:
+        "salmon quant -i {input.index} -l A -p 12 --gcBias "
+        "--numGibbsSamples 20 --thinningFactor 100 "
+        "-o salmon.{wildcards.sample} -1 {input.R1} -2 {input.R2}"

@@ -1,0 +1,44 @@
+### Ingeration of configuration file
+
+configfile: "config.yaml"
+
+rule all:
+    input:
+        "Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz",
+        "Rattus_norvegicus.Rnor_6.0.89.gtf.gz",
+        "Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz",
+        "Rattus_norvegicus.Rnor_6.0.89.gtf"
+
+
+## Downloading reference fasta regarding STAR indexing
+rule download_ref_fasta_star:
+    input:
+    output:
+        "Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz"
+    shell:
+        "wget -c {config[ref_star_index_rat]}"        
+
+## Downloading GTF regarding STAR Indexing
+rule download_ref_gtf_star:
+    input:
+    output:
+        "Rattus_norvegicus.Rnor_6.0.89.gtf.gz"
+    shell:
+        "wget -c {config[ref_gtf_rat]}"
+         
+## Extracting reference fasta and GTF         
+rule extract_ref_fasta_gtf_star:
+    input:
+        gtf="Rattus_norvegicus.Rnor_6.0.89.gtf.gz",
+        fasta="Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz"
+    output:
+        "Rattus_norvegicus.Rnor_6.0.89.gtf",
+        "Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa"
+    shell:
+        """
+        gzip -d {input.gtf}
+        gzip -d {input.fasta}
+        """
+
+
+

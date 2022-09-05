@@ -1,0 +1,18 @@
+### STAR Indexing regarding human
+
+rule star_indexing:
+	input:
+		fasta="Homo_sapiens.GRCh38.cdna.all.fa",
+		gtf="Homo_sapiens.GRCh38.100.gtf"
+	output:
+		directory("starIndex")
+	threads: 20
+	shell:
+		'mkdir {output} && '
+		'STAR --runThreadN {threads} '
+		'--runMode genomeGenerate '
+		'--genomeDir {output} '
+		'--genomeFastaFiles {input.fasta} '
+		'--sjdbGTFfile {input.gtf} '
+		'--sjdbOverhang 100'
+

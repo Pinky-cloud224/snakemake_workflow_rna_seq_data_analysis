@@ -1,0 +1,45 @@
+## Integration of configuration file
+
+configfile: "config.yaml"
+
+rule all:
+    input:
+        "Homo_sapiens.GRCh38.cdna.all.fa.gz ",
+        "Homo_sapiens.GRCh38.100.gtf.gz ",
+        "Homo_sapiens.GRCh38.100.gtf",
+        "Homo_sapiens.GRCh38.cdna.all.fa"
+        
+### downloading reference fasta regarding STAR indexing
+
+rule download_reference_fasta:
+    input:
+    output:
+        "Homo_sapiens.GRCh38.cdna.all.fa"
+    shell:
+        "wget -c {config[star_fasta_human]}"        
+
+## Downloading reference GTF regarding STAR indexing
+
+rule download_reference_gtf:
+    input:
+    output:
+        "Homo_sapiens.GRCh38.100.gtf.gz"
+    shell:
+        "wget -c {config[human_gtf]}" 
+        
+### Extracting reference fasta and GTF
+
+rule extract_reference_fasta_gtf:
+    input:
+        gtf="Homo_sapiens.GRCh38.100.gtf.gz",
+        fasta="Homo_sapiens.GRCh38.cdna.all.fa.gz"
+    output:
+        "Homo_sapiens.GRCh38.100.gtf",
+        "Homo_sapiens.GRCh38.cdna.all.fa"
+    shell:
+        """
+        gzip -d {input.gtf}
+        gzip -d {input.fasta}
+        """
+
+

@@ -1,0 +1,91 @@
+### STAR mapping, FeatureCounts and HTSeq-count in regard to Norway rat
+
+
+## Importing glob wildcard
+import glob
+
+## Integrating sample root directory
+SAMPLE_DIR="/home/pdebnath/star_snake/"
+
+SAMPLE,=glob_wildcards(SAMPLE_DIR + "/{sample}_R1_001.fastq.gz")
+rule all:
+	input:
+		expand("{sample}_pass1/SJ.out.tab", sample=SAMPLE),
+		expand("{sample}_pass2/Aligned.sortedByCoord.out.bam", sample=SAMPLE),
+		expand("{sample}_feature_counts.tsv", sample=SAMPLE),
+		expand("{sample}_HTSeq.tsv",sample=SAMPLE)
+		
+
+### STAR mapping pass-1
+rule star_pass1:
+	input:
+		R1=SAMPLE_DIR+"HSC_T6_S3_R1_001.fastq.gz",
+		R2=SAMPLE_DIR+"HSC_T6_S3_R2_001.fastq.gz",
+		ref_dir=SAMPLE_DIR+"starIndex"
+		
+	params:
+		outdir="{sample}_pass1"
+
+	output:
+		"{sample}_pass1/SJ.out.tab"
+	threads: 20
+	shell:
+		'rm -rf {params.outdir} &&'
+		'mkdir {params.outdir} && '
+		'cd {params.outdir} && '
+		'STAR --runThreadN {threads} '
+		'--genomeDir {input.ref_dir} '
+		'--readFilesIn {input.R1},{input.R2} '
+		'--readFilesCommand zcat '
+		'--outSAMtype BAM Unsorted '
+
+
+### STAR mapping pass-2				
+rule star_pass2:
+	input:
+		R1=SAMPLE_DIR+"HSC_T6_S3_R1_001.fastq.gz",
+		R2=SAMPLE_DIR+"HSC_T6_S3_R2_001.fastq.gz",
+		ref_dir=SAMPLE_DIR+"starIndex",
+		sj=SAMPLE_DIR+"{sample}_pass1/SJ.out.tab"
+	params:
+		outdir="{sample}_pass2",
+		id="{sample}"
+	output:
+		"{sample}_pass2/Aligned.sortedByCoord.out.bam"
+	threads: 20
+	shell:
+		'rm -rf {params.outdir} &&' 
+        	'mkdir {params.outdir} && '
+        	'cd {params.outdir} && '
+        	'STAR --runThreadN {threads} '
+        	'--genomeDir {input.ref_dir} '
+        	'--readFilesIn {input.R1},{input.R2} '
+        	'--readFilesCommand zcat '
+        	'--outSAMtype BAM SortedByCoordinate '
+		'--outSAMattrRGline ID:{params.id} '
+        	'--sjdbFileChrStartEnd {input.sj} '
+        	'--quantMode GeneCounts '
+
+
+### FeatureCounting 
+rule feature_count:
+    input:
+        bam = SAMPLE_DIR+"{sample}_pass2/Aligned.sortedByCoord.out.bam",
+        gtf= SAMPLE_DIR+"Rattus_norvegicus.Rnor_6.0.89.gtf"
+    output:
+        "{sample}_feature_counts.tsv"
+    threads: 20
+    shell:
+        "featureCounts -T 4 -t exon -g gene_id -a {input.gtf} -o {output} {input.bam}"
+
+## HTSeq-counting:
+rule htseq:
+    input:
+        bam = SAMPLE_DIR+"{sample}_pass2/Aligned.sortedByCoord.out.bam",
+        gtf= SAMPLE_DIR+"Rattus_norvegicus.Rnor_6.0.89.gtf"
+    output:
+        "{sample}_HTSeq.tsv"
+    threads: 1
+    shell:
+        "samtools view -h {input.bam} | htseq-count --mode intersection-strict --stranded no --minaqual 1 --type exon --idattr gene_id - {input.gtf} > {output}"
+

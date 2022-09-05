@@ -1,0 +1,12 @@
+##config file for Norway rat and human
+
+adapter_seq: AGATCGGAAGAGC
+ref_fasta_sal_kal_rat: http://ftp.ensembl.org/pub/release-104/fasta/rattus_norvegicus/cdna/Rattus_norvegicus.Rnor_6.0.cdna.all.fa.gz
+salmon_index_rat: /home/pinky/snakemake_all_rat/salmon_index
+SAIndex: 13 
+ref_star_index_rat: http://ftp.ensembl.org/pub/release-104/fasta/rattus_norvegicus/dna/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
+ref_gtf_rat: ftp://ftp.ensembl.org/pub/release-89/gtf/rattus_norvegicus/Rattus_norvegicus.Rnor_6.0.89.gtf.gz
+star_fasta_human: ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz 
+human_gtf: http://ftp.ensembl.org/pub/release-100/gtf/homo_sapiens/Homo_sapiens.GRCh38.100.gtf.gz
+ref_fasta_sal_kal_human: http://ftp.ensembl.org/pub/release-107/fasta/homo_sapiens/ncrna/Homo_sapiens.GRCh38.ncrna.fa.gz
+salmon_index_human: /home/pinky/snakemake_all_human/salmon_index

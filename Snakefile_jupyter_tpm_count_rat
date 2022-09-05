@@ -1,0 +1,7 @@
+rule tpm_count:
+    input:
+        "HSC_T6_S3_feature_count.tsv"
+    output:
+        "featurecount_rat_TPM_sorted.tsv"
+    notebook:
+        "feature_counts_tpm_calculation_rat.ipynb"

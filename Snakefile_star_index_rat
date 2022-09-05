@@ -1,0 +1,19 @@
+## STAR indexing regarding rat
+
+
+rule star_indexing:
+	input:
+		fasta="Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa",
+		gtf="Rattus_norvegicus.Rnor_6.0.89.gtf"
+	output:
+		directory("starIndex")
+	threads: 20
+	shell:
+		'mkdir {output} && '
+		'STAR --runThreadN {threads} '
+		'--runMode genomeGenerate '
+		'--genomeDir {output} '
+		'--genomeFastaFiles {input.fasta} '
+		'--sjdbGTFfile {input.gtf} '
+		'--sjdbOverhang 100'
+

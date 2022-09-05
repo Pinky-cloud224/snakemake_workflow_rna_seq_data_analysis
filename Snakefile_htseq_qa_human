@@ -1,0 +1,27 @@
+#htseq quality assessment
+
+rule all:
+    input:
+        "Aligned.sortedByCoord.out.sam",
+        "Aligned.sortedByCoord.out.sam.pdf"
+
+rule converting_bam_to_sam_file:
+    input:
+        "Aligned.sortedByCoord.out.bam"
+    output:
+        "Aligned.sortedByCoord.out.sam"
+    shell:
+        "samtools view -h {input} > {output} "
+
+rule htseq_qa:
+    input:
+        "Aligned.sortedByCoord.out.sam"
+    output:
+        "Aligned.sortedByCoord.out.sam.pdf"
+    
+    shell:
+        "python -m HTSeq.scripts.qa {input} "
+
+
+
+
